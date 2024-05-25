@@ -1,4 +1,5 @@
 import random
+import datetime
 import psycopg2
 from faker import Faker
 
@@ -98,28 +99,27 @@ def generar_productos(productos_especificos):
         productos_detalles[categoria] = detalles_categoria
     return productos_detalles
 
-# Función para generar datos falsos de sucursal-departamento
 def generar_sucursal_departamento(sucursales_ids, departamentos_ids):
     sucursal_departamento_data = []
     id_sucursal_departamento = 1
     for sucursal_id in sucursales_ids:
-        for _ in range(random.randint(1, len(departamentos_ids))):
+        for _ in range(random.randint(1, len(departamentos_ids))):  
             departamento_id = random.choice(departamentos_ids)
             sucursal_departamento_data.append((id_sucursal_departamento, sucursal_id, departamento_id))
             id_sucursal_departamento += 1
+            
     return sucursal_departamento_data
 
-def generar_stock_sucursal(sucursales_ids, productos_detalles):
-    stock_sucursal = []
-    id_stock_sucursal = 1
+def generar_stock_productos(sucursales_ids, productos_detalles):
+    stock_productos = []
+    id_stock_producto = 1
     for sucursal_id in sucursales_ids:
         for categoria, productos in productos_detalles.items():
             for producto in productos:
                 stock = random.randint(0, 100)
-                stock_sucursal.append((id_stock_sucursal, stock, productos[producto]['id_producto'], sucursal_id))
-                id_stock_sucursal += 1
-    return stock_sucursal
-
+                stock_productos.append((id_stock_producto, sucursal_id, productos[producto]['id_producto'], stock))
+                id_stock_producto += 1
+    return stock_productos
 
 def generar_proveedores(n):
     proveedores = []
@@ -142,11 +142,19 @@ def generar_producto_proveedor(productos_detalles, proveedores):
 
 productos = generar_productos(productos_especificos)
 
+# Insertar productos
+for categoria, productos_categoria in productos.items():
+    for producto, detalles_producto in productos_categoria.items():
+        cursor.execute(
+            """INSERT INTO public."Producto" (id_producto, nombre, precio_venta, precio_compra, categoria) VALUES (%s, %s, %s, %s, %s)""",
+            (detalles_producto['id_producto'], producto, detalles_producto['precio_venta'], detalles_producto['precio_compra'], categoria)
+        )
+
 # Insertar departamentos
 for idx, nombre in enumerate(departamentos, start=1):
     cursor.execute(
         """
-        INSERT INTO Departamento (id_departamento, nombre) 
+        INSERT INTO public."Departamento" (id_departamento, nombre) 
         VALUES (%s, %s)
         """,
         (idx, nombre)
@@ -156,18 +164,18 @@ for idx, nombre in enumerate(departamentos, start=1):
 for sucursal in sucursales:
     cursor.execute(
         """
-        INSERT INTO Sucursal (id_sucursal, direccion, nombre) 
+        INSERT INTO public."Sucursal" (id_sucursal, direccion, nombre) 
         VALUES (%s, %s, %s)
         """,
         (sucursal['id'], sucursal['direccion'], sucursal['nombre'])
     )
     
 # Obtener IDs de sucursales
-cursor.execute("SELECT id_sucursal FROM Sucursal")
+cursor.execute("""SELECT id_sucursal FROM public."Sucursal" """)
 sucursales_ids = [row[0] for row in cursor.fetchall()]
 
 # Obtener IDs de departamentos
-cursor.execute("SELECT id_departamento FROM Departamento")
+cursor.execute("""SELECT id_departamento FROM public."Departamento" """)
 departamentos_ids = [row[0] for row in cursor.fetchall()]
 
 sucursal_departamento_data = generar_sucursal_departamento(sucursales_ids, departamentos_ids)
@@ -175,28 +183,30 @@ sucursal_departamento_data = generar_sucursal_departamento(sucursales_ids, depar
 # Insertar datos en Sucursal_Departamento
 for id_sucursal_departamento, id_sucursal, id_departamento in sucursal_departamento_data:
     cursor.execute(
-        "INSERT INTO Sucursal_Departamento (id_sucursal_departamento, id_sucursal, id_departamento) VALUES (%s, %s, %s)",
+        """INSERT INTO public."Sucursal_Departamento" (id_sucursal_departamento, id_sucursal, id_departamento) VALUES (%s, %s, %s)""",
         (id_sucursal_departamento, id_sucursal, id_departamento)
     )
     
+stock_productos = generar_stock_productos(sucursales_ids, productos)
 
-stock_sucursal = generar_stock_sucursal(sucursales_ids, productos)
-
-# Insertar datos en Stock_Sucursal
-for id_stock_sucursal, stock, id_producto, id_sucursal in stock_sucursal:
+# Insertar datos en Stock_Producto
+for id_stock_producto, id_sucursal, id_producto, stock in stock_productos:
     cursor.execute(
-        "INSERT INTO Stock_Sucursal(stock_id, stock, producto_id, sucursal_id) VALUES (%s, %s, %s, %s)",
-        (id_stock_sucursal, stock, id_producto, id_sucursal)
+        """INSERT INTO public."Stock_Sucursal" (stock_id, id_sucursal, id_producto, stock) VALUES (%s, %s, %s, %s)""",
+        (id_stock_producto, id_sucursal, id_producto, stock)
     )
-
+    
 proveedores = generar_proveedores(10)
 
 # Insertar datos en Proveedor
 for proveedor in proveedores:
     cursor.execute(
-        "INSERT INTO Proveedor (rut_proveedor, nombre, direccion, contacto) VALUES (%s, %s, %s, %s)",
+        """INSERT INTO public."Proveedor" (rut_proveedor, nombre, direccion, contacto) VALUES (%s, %s, %s, %s)""",
         proveedor
     )
+
+
+
 
 # Confirmar las transacciones
 conn.commit()
