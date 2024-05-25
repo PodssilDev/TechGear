@@ -98,14 +98,16 @@ def generar_productos(productos_especificos):
         productos_detalles[categoria] = detalles_categoria
     return productos_detalles
 
+# Función para generar datos falsos de sucursal-departamento
 def generar_sucursal_departamento(sucursales_ids, departamentos_ids):
     sucursal_departamento_data = []
     id_sucursal_departamento = 1
     for sucursal_id in sucursales_ids:
-        for _ in range(random.randint(1, len(departamentos_ids))):  
+        for _ in range(random.randint(1, len(departamentos_ids))):
             departamento_id = random.choice(departamentos_ids)
             sucursal_departamento_data.append((id_sucursal_departamento, sucursal_id, departamento_id))
             id_sucursal_departamento += 1
+    return sucursal_departamento_data
 
 def generar_stock_sucursal(sucursales_ids, productos_detalles):
     stock_sucursal = []
