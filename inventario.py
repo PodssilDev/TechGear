@@ -1,24 +1,18 @@
 import random
-import psycopg2
 from faker import Faker
+import mysql.connector
 
-# Credenciales 
-host = 'bd-logistica.postgres.database.azure.com'
-dbname = 'postgres'
-user = 'logistica'
-password = 'Arqui1234!'
+# BD Inventario
+config_inventario = {
+  'user': 'inventario',
+  'password': 'Arqui1234!',
+  'host': 'bd-inventario.mysql.database.azure.com',
+  'database': 'inventario_data',  
+}
 
-# Conexión a la base de datos
-conn = psycopg2.connect(
-    dbname=dbname,
-    user=user,
-    password=password,
-    host=host
-)
+conn_inventario = mysql.connector.connect(**config_inventario)
+cursor_inventario = conn_inventario.cursor()
 
-cursor = conn.cursor()
-
-# Datos sintéticos
 fake = Faker()
 
 categorias = [
@@ -79,19 +73,19 @@ sucursales = [
 
 def generar_productos(productos_especificos):
     productos_detalles = {}
+    # ID incremental
     id_producto = 1
     for categoria, productos in productos_especificos.items():
         detalles_categoria = {}
+        # Para cada producto genera una tupla 
         for producto in productos:
             precio_venta = random.randint(10000, 2000000)  
             precio_compra = random.randint(5000, precio_venta)  
-            rut_proveedor = fake.unique.ssn()  
             detalles_producto = {
                 'id_producto': id_producto,
                 'producto': producto,
                 'precio_venta': precio_venta,
                 'precio_compra': precio_compra,
-                'rut_proveedor': rut_proveedor
             }
             detalles_categoria[producto] = detalles_producto
             id_producto += 1  
@@ -106,6 +100,7 @@ def generar_sucursal_departamento(sucursales_ids, departamentos_ids):
             departamento_id = random.choice(departamentos_ids)
             sucursal_departamento_data.append((id_sucursal_departamento, sucursal_id, departamento_id))
             id_sucursal_departamento += 1
+    return sucursal_departamento_data  # Añade esta línea para devolver los datos generados
 
 def generar_stock_sucursal(sucursales_ids, productos_detalles):
     stock_sucursal = []
@@ -119,30 +114,20 @@ def generar_stock_sucursal(sucursales_ids, productos_detalles):
     return stock_sucursal
 
 
-def generar_proveedores(n):
-    proveedores = []
-    for _ in range(n):
-        rut_proveedor = fake.unique.ssn()
-        nombre = fake.company()
-        direccion = fake.address()
-        contacto  = fake.random_number(digits=9)
-        proveedores.append((rut_proveedor, nombre, direccion, contacto))
-    return proveedores
-
-def generar_producto_proveedor(productos_detalles, proveedores):
-    producto_proveedor = []
-    for categoria, productos in productos_detalles.items():
-        for producto in productos:
-            rut_proveedor = productos[producto]['rut_proveedor']
-            id_producto = productos[producto]['id_producto']
-            producto_proveedor.append((rut_proveedor, id_producto))
-    return producto_proveedor
-
 productos = generar_productos(productos_especificos)
+
+# Insertar datos en la tabla Producto 
+for categoria, productos_categoria in productos.items():
+    for producto, detalles_producto in productos_categoria.items():
+        # BD Inventario
+        cursor_inventario.execute("""
+            INSERT INTO Producto (id_producto, nombre, precio_venta, precio_compra, categoria)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (detalles_producto['id_producto'], producto, detalles_producto['precio_venta'], detalles_producto['precio_compra'], categoria))
 
 # Insertar departamentos
 for idx, nombre in enumerate(departamentos, start=1):
-    cursor.execute(
+    cursor_inventario.execute(
         """
         INSERT INTO Departamento (id_departamento, nombre) 
         VALUES (%s, %s)
@@ -152,7 +137,7 @@ for idx, nombre in enumerate(departamentos, start=1):
     
 # Insertar sucursales
 for sucursal in sucursales:
-    cursor.execute(
+    cursor_inventario.execute(
         """
         INSERT INTO Sucursal (id_sucursal, direccion, nombre) 
         VALUES (%s, %s, %s)
@@ -161,44 +146,34 @@ for sucursal in sucursales:
     )
     
 # Obtener IDs de sucursales
-cursor.execute("SELECT id_sucursal FROM Sucursal")
-sucursales_ids = [row[0] for row in cursor.fetchall()]
+cursor_inventario.execute("SELECT id_sucursal FROM Sucursal")
+sucursales_ids = [row[0] for row in cursor_inventario.fetchall()]
 
 # Obtener IDs de departamentos
-cursor.execute("SELECT id_departamento FROM Departamento")
-departamentos_ids = [row[0] for row in cursor.fetchall()]
+cursor_inventario.execute("SELECT id_departamento FROM Departamento")
+departamentos_ids = [row[0] for row in cursor_inventario.fetchall()]
 
 sucursal_departamento_data = generar_sucursal_departamento(sucursales_ids, departamentos_ids)
 
 # Insertar datos en Sucursal_Departamento
 for id_sucursal_departamento, id_sucursal, id_departamento in sucursal_departamento_data:
-    cursor.execute(
+    cursor_inventario.execute(
         "INSERT INTO Sucursal_Departamento (id_sucursal_departamento, id_sucursal, id_departamento) VALUES (%s, %s, %s)",
         (id_sucursal_departamento, id_sucursal, id_departamento)
     )
     
-
 stock_sucursal = generar_stock_sucursal(sucursales_ids, productos)
 
 # Insertar datos en Stock_Sucursal
 for id_stock_sucursal, stock, id_producto, id_sucursal in stock_sucursal:
-    cursor.execute(
+    cursor_inventario.execute(
         "INSERT INTO Stock_Sucursal(stock_id, stock, producto_id, sucursal_id) VALUES (%s, %s, %s, %s)",
         (id_stock_sucursal, stock, id_producto, id_sucursal)
     )
 
-proveedores = generar_proveedores(10)
-
-# Insertar datos en Proveedor
-for proveedor in proveedores:
-    cursor.execute(
-        "INSERT INTO Proveedor (rut_proveedor, nombre, direccion, contacto) VALUES (%s, %s, %s, %s)",
-        proveedor
-    )
-
 # Confirmar las transacciones
-conn.commit()
+conn_inventario.commit()
 
 # Cerrar la conexión
-cursor.close()
-conn.close()
+cursor_inventario.close()
+conn_inventario.close()
