@@ -10,7 +10,7 @@ import pymssql
 ##################
 
 # Función para generar datos falsos de productos
-def generar_productos(productos_especificos):
+def generar_productos(productos_especificos, proveedores):
     productos_detalles = {}
     # ID incremental
     id_producto = 1
@@ -19,12 +19,14 @@ def generar_productos(productos_especificos):
         # Para cada producto genera una tupla 
         for producto in productos:
             precio_venta = random.randint(10000, 2000000)  
-            precio_compra = random.randint(5000, precio_venta)  
+            precio_compra = random.randint(5000, precio_venta)
+            rut = random.choice(proveedores)['rut']
             detalles_producto = {
                 'id_producto': id_producto,
                 'producto': producto,
                 'precio_venta': precio_venta,
                 'precio_compra': precio_compra,
+                'rut_proveedor': rut,
             }
             detalles_categoria[producto] = detalles_producto
             id_producto += 1  
@@ -121,7 +123,7 @@ try:
 
     
 
-    productos = generar_productos(productos_especificos)
+    productos = generar_productos(productos_especificos, proveedores)
     
     # Se limpian las tablas desactivando y activando las restricciones de llave foranea
     cursor_producto.execute("ALTER TABLE Stock_Sucursal NOCHECK CONSTRAINT ALL")
@@ -139,15 +141,6 @@ try:
     cursor_producto.execute("ALTER TABLE Sucursal WITH CHECK CHECK CONSTRAINT ALL")
     cursor_producto.execute("ALTER TABLE Proveedor WITH CHECK CHECK CONSTRAINT ALL")
     
-    # Insertar datos en la tabla Producto 
-    for categoria, productos_categoria in productos.items():
-        for producto, detalles_producto in productos_categoria.items():
-            # BD Inventario
-            cursor_producto.execute("""
-                INSERT INTO Producto (id_producto, nombre, precio_venta, precio_compra, categoria)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (detalles_producto['id_producto'], producto, detalles_producto['precio_venta'], detalles_producto['precio_compra'], categoria))
-
     # Insertar proveedores
     for proveedor in proveedores:
         cursor_producto.execute(
@@ -157,6 +150,17 @@ try:
             """,
             (proveedor['rut'], proveedor['nombre'], proveedor['direccion'])
         )
+        
+    # Insertar datos en la tabla Producto 
+    for categoria, productos_categoria in productos.items():
+        for producto, detalles_producto in productos_categoria.items():
+            # BD Inventario
+            cursor_producto.execute("""
+                INSERT INTO Producto (id_producto, nombre, precio_venta, precio_compra, categoria, rut_proveedor)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (detalles_producto['id_producto'], producto, detalles_producto['precio_venta'], detalles_producto['precio_compra'], categoria, detalles_producto['rut_proveedor']))
+
+    
 
     # Insertar sucursales
     for sucursal in sucursales:
@@ -181,7 +185,3 @@ except pymssql.OperationalError as e:
     print(f"Error de conexión: {e}")
 except Exception as e:
     print(f"Otro error: {e}")
-
-
-
-
