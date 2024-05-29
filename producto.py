@@ -36,13 +36,19 @@ def generar_productos(productos_especificos, proveedores):
 
 # Función para generar datos falsos de stock_sucursal
 def generar_stock_sucursal(productos_ids, sucursales_ids):
+    
     stock_sucursal_data = []
     id_stock_sucursal = 1
-    for producto_id in productos_ids:
-        for sucursal_id in range(random.randint(1, len(sucursales_ids))): #no estoy seguro
-            stock = random.randint(1, 100)
+    
+    for sucursal_id in sucursales_ids:
+        numero_aleatorio = random.randint((len(productos_ids)*2)//3, len(productos_ids))
+        productos_reducidos = random.sample(productos_ids, numero_aleatorio) 
+           
+        for producto_id in productos_reducidos:
+            stock = random.randint(5, 100)
             stock_sucursal_data.append((id_stock_sucursal, stock, producto_id, sucursal_id))
             id_stock_sucursal += 1
+
     return stock_sucursal_data
 
 ############
@@ -160,7 +166,6 @@ try:
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (detalles_producto['id_producto'], producto, detalles_producto['precio_venta'], detalles_producto['precio_compra'], categoria, detalles_producto['rut_proveedor']))
 
-    
 
     # Insertar sucursales
     for sucursal in sucursales:
@@ -171,7 +176,19 @@ try:
             """,
             (sucursal['id'], sucursal['direccion'], sucursal['nombre'])
         )
+    # Generar IDs de productos y sucursales para generar stock
+    productos_ids = [detalles['id_producto'] for productos_cat in productos.values() for detalles in productos_cat.values()]
+    sucursales_ids = [sucursal['id'] for sucursal in sucursales]
 
+    # Generar datos de stock en sucursales
+    stock_sucursal_data = generar_stock_sucursal(productos_ids, sucursales_ids)
+
+    # Insertar datos en la tabla Stock_Sucursal
+    for stock_sucursal in stock_sucursal_data:
+        cursor_producto.execute("""
+            INSERT INTO Stock_Sucursal (stock_id, stock, producto_id, sucursal_id)
+            VALUES (%s, %s, %s, %s)
+        """, stock_sucursal)
     # creo que no se debiese generar ids de nada porque ya se creó stock_sucursal en la linea 110
 
     # Confirmar cambios y cerrar conexión
