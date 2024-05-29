@@ -1,32 +1,44 @@
+-- Base de Datos MySQL
+-- Crear la tabla Sucursal
+-- Descripcion: Tabla que almacena las sucursales de la empresa
 CREATE TABLE `Sucursal` (
-  `id_sucursal` integer PRIMARY KEY AUTO_INCREMENT,
-  `direccion` varchar(255),
-  `nombre` varchar(255)
+  `id_sucursal` integer PRIMARY KEY AUTO_INCREMENT,  -- Llave primaria, identificador único de la sucursal, generado automáticamente
+  `direccion` varchar(255),  -- Dirección de la sucursal
+  `nombre` varchar(255)  -- Nombre de la sucursal
 );
 
+-- Crear la tabla Departamento
+-- Descripcion: Tabla que almacena los departamentos de la empresa
 CREATE TABLE `Departamento` (
-  `id_departamento` integer PRIMARY KEY AUTO_INCREMENT,
-  `nombre` varchar(255)
+  `id_departamento` integer PRIMARY KEY AUTO_INCREMENT,  -- Llave primaria, identificador único del departamento, generado automáticamente
+  `nombre` varchar(255)  -- Nombre del departamento
 );
 
+-- Crear la tabla Sucursal_Departamento
+-- Descripcion: Tabla que almacena la relación entre sucursales y departamentos
 CREATE TABLE `Sucursal_Departamento` (
-  `id_sucursal_departamento` integer PRIMARY KEY AUTO_INCREMENT,
-  `id_sucursal` integer,
-  `id_departamento` integer
+  `id_sucursal_departamento` integer PRIMARY KEY AUTO_INCREMENT,  -- Llave primaria, identificador único de la relación sucursal-departamento, generado automáticamente
+  `id_sucursal` integer,  -- Identificador de la sucursal asociada
+  `id_departamento` integer  -- Identificador del departamento asociado
 );
 
+-- Crear la tabla Trabajador
+-- Descripcion: Tabla que almacena los trabajadores de la empresa
 CREATE TABLE `Trabajador` (
-  `run_trabajador` varchar(255) PRIMARY KEY,
-  `nombre` varchar(255),
-  `correo` varchar(255),
-  `cargo` varchar(255),
-  `sueldo` integer,
-  `fecha_ingreso` date,
-  `id_departamento` integer
+  `run_trabajador` varchar(255) PRIMARY KEY,  -- Llave primaria, identificador único del trabajador
+  `nombre` varchar(255),  -- Nombre del trabajador
+  `correo` varchar(255),  -- Correo electrónico del trabajador
+  `cargo` varchar(255),  -- Cargo del trabajador
+  `sueldo` integer,  -- Sueldo del trabajador
+  `fecha_ingreso` date,  -- Fecha de ingreso del trabajador
+  `id_departamento` integer  -- Identificador del departamento al que pertenece el trabajador
 );
 
+-- Añadir llave foránea en la tabla Sucursal_Departamento para asociarla con la tabla Sucursal
 ALTER TABLE `Sucursal_Departamento` ADD FOREIGN KEY (`id_sucursal`) REFERENCES `Sucursal` (`id_sucursal`);
 
+-- Añadir llave foránea en la tabla Sucursal_Departamento para asociarla con la tabla Departamento
 ALTER TABLE `Sucursal_Departamento` ADD FOREIGN KEY (`id_departamento`) REFERENCES `Departamento` (`id_departamento`);
 
+-- Añadir llave foránea en la tabla Trabajador para asociarla con la tabla Departamento
 ALTER TABLE `Trabajador` ADD FOREIGN KEY (`id_departamento`) REFERENCES `Departamento` (`id_departamento`);

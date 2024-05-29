@@ -1,26 +1,29 @@
+# BLOQUE DE DEFINICIONES
+# ----------------------------------------------------------------------------
+# IMPORTACION DE FUNCIONES
+# ----------------------------------------------------------------------------
 import random
 from faker import Faker
 import pymssql
 
-# Conexión a la base de datos
-# BD Producto
-
-##################
-#  DEFINICIONES  #
-##################
-
-# Función para generar datos falsos de productos
+# DEFINICIONES DE FUNCIONES
+#----------------------------------------------------------------------------
+'''
+Entradas:
+        - productos_especificos (dict) - Diccionario con los productos específicos por categoría
+        - proveedores (list) - Lista de proveedores
+Salida: productos_detalles (dict) - Diccionario con los detalles de los productos generados
+Descripción: Genera datos sintéticos de productos con precios aleatorios y RUT de proveedor único
+'''
 def generar_productos(productos_especificos, proveedores):
     productos_detalles = {}
-    # ID incremental
-    id_producto = 1
+    id_producto = 1  # ID incremental para productos
     for categoria, productos in productos_especificos.items():
         detalles_categoria = {}
-        # Para cada producto genera una tupla 
         for producto in productos:
-            precio_venta = random.randint(10000, 2000000)  
-            precio_compra = random.randint(5000, precio_venta)
-            rut = random.choice(proveedores)['rut']
+            precio_venta = random.randint(10000, 2000000)  # Precio de venta aleatorio
+            precio_compra = random.randint(5000, precio_venta)  # Precio de compra aleatorio
+            rut = random.choice(proveedores)['rut']  # Seleccionar un proveedor aleatorio
             detalles_producto = {
                 'id_producto': id_producto,
                 'producto': producto,
@@ -29,36 +32,35 @@ def generar_productos(productos_especificos, proveedores):
                 'rut_proveedor': rut,
             }
             detalles_categoria[producto] = detalles_producto
-            id_producto += 1  
+            id_producto += 1  # Incrementar ID del producto
         productos_detalles[categoria] = detalles_categoria
     return productos_detalles
 
 
-# Función para generar datos falsos de stock_sucursal
+'''
+Entradas:
+        - productos_ids (list) - Lista de IDs de productos
+        - sucursales_ids (list) - Lista de IDs de sucursales
+Salida: stock_sucursal_data (list) - Lista de tuplas con los datos de stock de productos por sucursal generados
+Descripción: Genera datos de stock de productos por sucursal de forma aleatoria con cantidades aleatorias
+'''
 def generar_stock_sucursal(productos_ids, sucursales_ids):
-    
     stock_sucursal_data = []
-    id_stock_sucursal = 1
-    
+    id_stock_sucursal = 1  # ID incremental para stock
     for sucursal_id in sucursales_ids:
-        numero_aleatorio = random.randint((len(productos_ids)*2)//3, len(productos_ids))
-        productos_reducidos = random.sample(productos_ids, numero_aleatorio) 
-           
+        numero_aleatorio = random.randint((len(productos_ids)*2)//3, len(productos_ids))  # Número aleatorio de productos por sucursal
+        productos_reducidos = random.sample(productos_ids, numero_aleatorio)  # Seleccionar productos aleatorios
         for producto_id in productos_reducidos:
-            stock = random.randint(5, 100)
+            stock = random.randint(5, 100)  # Cantidad aleatoria de stock
             stock_sucursal_data.append((id_stock_sucursal, stock, producto_id, sucursal_id))
             id_stock_sucursal += 1
-
     return stock_sucursal_data
 
-############
-#  INICIO  #
-############
 
-#Se intenta la conexion y los insert, en caso de error, lo muestra en consola.
+# BLOQUE PRINCIPAL
+#----------------------------------------------------------------------------
 try:
-    
-    #Se realiza la conexion usando pymssql
+    # Conexión a la base de datos usando pymssql
     conn_producto = pymssql.connect(
         server='techgear.database.windows.net',
         user='arquitecturadb',
@@ -68,18 +70,19 @@ try:
         encryption='require',
         login_timeout=30
     )
-    
+    # Crear un cursor para realizar operaciones en la base de datos
     cursor_producto = conn_producto.cursor()
+    # Inicializar Faker para generar datos sintéticos
     fake = Faker()
 
-    # Lista de sucursales
+    # Lista de sucursales con datos falsos generados por Faker
     sucursales = [
         {'id': 1, 'nombre': 'Sucursal 1', 'direccion': fake.address()},
         {'id': 2, 'nombre': 'Sucursal 2', 'direccion': fake.address()},
         {'id': 3, 'nombre': 'Sucursal 3', 'direccion': fake.address()}
     ]
 
-    # Lista de proveedores
+    # Lista de proveedores con datos falsos
     proveedores = [
         {'rut': '11.111.111-1', 'nombre': 'Proveedor 1', 'direccion': fake.address()},
         {'rut': '22.222.222-2', 'nombre': 'Proveedor 2', 'direccion': fake.address()},
@@ -98,7 +101,7 @@ try:
         'monitores'
     ]
 
-    # Lista de productos específicos
+    # Diccionario de productos específicos por categoría
     productos_especificos = {
         'computadores': [
             'Laptop HP', 'MacBook Pro', 'Dell Inspiron', 'Lenovo ThinkPad', 'Acer Aspire',
@@ -127,27 +130,28 @@ try:
         ]
     }
 
-    
-
+    # Generar datos de productos
     productos = generar_productos(productos_especificos, proveedores)
     
-    # Se limpian las tablas desactivando y activando las restricciones de llave foranea
+    # Desactivar restricciones de llave foránea antes de limpiar las tablas
     cursor_producto.execute("ALTER TABLE Stock_Sucursal NOCHECK CONSTRAINT ALL")
     cursor_producto.execute("ALTER TABLE Producto NOCHECK CONSTRAINT ALL")
     cursor_producto.execute("ALTER TABLE Sucursal NOCHECK CONSTRAINT ALL")
     cursor_producto.execute("ALTER TABLE Proveedor NOCHECK CONSTRAINT ALL")
 
+    # Limpiar las tablas
     cursor_producto.execute("DELETE FROM Stock_Sucursal")
     cursor_producto.execute("DELETE FROM Producto")
     cursor_producto.execute("DELETE FROM Sucursal")
     cursor_producto.execute("DELETE FROM Proveedor")
 
+    # Activar restricciones de llave foránea después de limpiar las tablas
     cursor_producto.execute("ALTER TABLE Stock_Sucursal WITH CHECK CHECK CONSTRAINT ALL")
     cursor_producto.execute("ALTER TABLE Producto WITH CHECK CHECK CONSTRAINT ALL")
     cursor_producto.execute("ALTER TABLE Sucursal WITH CHECK CHECK CONSTRAINT ALL")
     cursor_producto.execute("ALTER TABLE Proveedor WITH CHECK CHECK CONSTRAINT ALL")
     
-    # Insertar proveedores
+    # Insertar proveedores en la tabla Proveedor
     for proveedor in proveedores:
         cursor_producto.execute(
             """
@@ -160,14 +164,13 @@ try:
     # Insertar datos en la tabla Producto 
     for categoria, productos_categoria in productos.items():
         for producto, detalles_producto in productos_categoria.items():
-            # BD Inventario
             cursor_producto.execute("""
                 INSERT INTO Producto (id_producto, nombre, precio_venta, precio_compra, categoria, rut_proveedor)
                 VALUES (%s, %s, %s, %s, %s, %s)
-            """, (detalles_producto['id_producto'], producto, detalles_producto['precio_venta'], detalles_producto['precio_compra'], categoria, detalles_producto['rut_proveedor']))
+                """, (detalles_producto['id_producto'], producto, detalles_producto['precio_venta'], detalles_producto['precio_compra'], categoria, detalles_producto['rut_proveedor'])
+            )
 
-
-    # Insertar sucursales
+    # Insertar sucursales en la tabla Sucursal
     for sucursal in sucursales:
         cursor_producto.execute(
             """
@@ -176,6 +179,7 @@ try:
             """,
             (sucursal['id'], sucursal['direccion'], sucursal['nombre'])
         )
+    
     # Generar IDs de productos y sucursales para generar stock
     productos_ids = [detalles['id_producto'] for productos_cat in productos.values() for detalles in productos_cat.values()]
     sucursales_ids = [sucursal['id'] for sucursal in sucursales]
@@ -188,16 +192,19 @@ try:
         cursor_producto.execute("""
             INSERT INTO Stock_Sucursal (stock_id, stock, producto_id, sucursal_id)
             VALUES (%s, %s, %s, %s)
-        """, stock_sucursal)
-    # creo que no se debiese generar ids de nada porque ya se creó stock_sucursal en la linea 110
+            """, stock_sucursal
+        )
 
-    # Confirmar cambios y cerrar conexión
+    # Confirmar las transacciones en la base de datos
     conn_producto.commit()
+    
+    # Cerrar el cursor y la conexión a la base de datos
     cursor_producto.close()
     conn_producto.close()
     
     print("Codigo ejecutado Exitosamente")
- 
+
+# Manejo de errores
 except pymssql.OperationalError as e:
     print(f"Error de conexión: {e}")
 except Exception as e:

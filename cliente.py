@@ -1,15 +1,120 @@
+# BLOQUE DE DEFINICIONES
+# ----------------------------------------------------------------------------
+# IMPORTACION DE FUNCIONES
+# ----------------------------------------------------------------------------
 import random
 import datetime
 import psycopg2
 from faker import Faker
 
-# Credenciales 
+# DEFINICIONES DE FUNCIONES
+#----------------------------------------------------------------------------
+'''
+Entrada: n (int) - Cantidad de clientes a generar
+Salida: clientes (list) - Lista de tuplas con los datos de los clientes generados
+Descripción: Genera datos sintéticos de clientes con RUT único
+'''
+def generar_clientes(n):
+    clientes = []
+    for _ in range(n):
+        run_cliente = fake.unique.ssn()  # Generar un RUT de cliente único
+        nombre = fake.name()  # Generar un nombre
+        correo = fake.email()  # Generar un correo electrónico
+        direccion = fake.address()  # Generar una dirección
+        telefono = fake.random_number(digits=9)  # Generar un número de teléfono
+        clientes.append((run_cliente, nombre, correo, direccion, telefono))
+    return clientes
+
+
+'''
+Entrada: productos_especificos (dict) - Diccionario con los productos específicos por categoría
+Salida: productos_detalles (dict) - Diccionario con los detalles de los productos generados
+Descripción: Genera datos sintéticos de productos con precios aleatorios y RUT de proveedor único
+'''
+def generar_productos(productos_especificos):
+    productos_detalles = {}
+    id_producto = 1
+    for categoria, productos in productos_especificos.items():
+        detalles_categoria = {}
+        for producto in productos:
+            precio_venta = random.randint(10000, 2000000)  # Generar un precio de venta aleatorio
+            precio_compra = random.randint(5000, precio_venta)  # Generar un precio de compra aleatorio
+            rut_proveedor = fake.unique.ssn()  # Generar un RUT de proveedor único
+            detalles_producto = {
+                'id_producto': id_producto,
+                'producto': producto,
+                'precio_venta': precio_venta,
+                'precio_compra': precio_compra,
+                'rut_proveedor': rut_proveedor
+            }
+            detalles_categoria[producto] = detalles_producto
+            id_producto += 1  # Incrementar el ID del producto
+        productos_detalles[categoria] = detalles_categoria
+    return productos_detalles
+
+
+'''
+Entradas: 
+        - n (int) - Cantidad de boletas a generar
+        - run_clientes (list) - Lista de RUT de clientes 
+        - productos_detalles (dict) - Diccionario con los detalles de los productos
+Salidas: 
+        - detalles_boleta (list) - Lista de tuplas con los detalles de las boletas generadas
+        - envios (list) - Lista de tuplas con los datos de los envíos generados
+        - boleta (list) - Lista de tuplas con los datos de las boletas generadas
+Descripción: Genera datos sintéticos de boletas y envíos asociados a los clientes y productos
+'''
+def generar_detalles_boleta(n, run_clientes, productos_detalles):
+    detalles_boleta = []
+    envios = []
+    boleta = []
+    for _ in range(n):
+        run_cliente = random.choice(run_clientes)  # Seleccionar un cliente aleatorio
+        productos = random.choice(list(productos_detalles.keys()))  # Seleccionar una categoría de productos aleatoria
+        id_envio = fake.random_number(digits=6)  # Generar un ID de envío aleatorio
+        id_boleta = fake.random_number(digits=6)  # Generar un ID de boleta aleatorio       
+        fecha = fake.date_this_year()  # Generar una fecha dentro del año actual
+        total = 0
+        for producto in productos_detalles[productos]:
+            id_detalle_boleta = fake.random_number(digits=6)  # Generar un ID de detalle de boleta aleatorio
+            id_producto = productos_detalles[productos][producto]['id_producto']
+            cantidad = random.randint(1, 10)  # Generar una cantidad aleatoria
+            valor = productos_detalles[productos][producto]['precio_venta'] * cantidad  # Calcular el valor total
+            total += valor  # Sumar al total de la boleta
+            detalles_boleta.append((id_detalle_boleta, id_producto, id_envio, id_boleta, cantidad, valor))      
+        # Generar datos de envío
+        envios = generar_envios(envios, fecha, id_envio)          
+        # Agregar datos de boleta
+        boleta.append((id_boleta, run_cliente, fecha, total))            
+    return detalles_boleta, envios, boleta    
+
+
+'''
+Entradas: 
+        - envios (list) - Lista de tuplas con los datos de los envíos
+        - fecha (datetime) - Fecha de referencia para el envío
+        - id_envio (int) - ID del envío a generar
+Salida: envios (list) - Lista de tuplas con los datos de los envíos generados
+Descripción: Genera datos sintéticos de envíos con método de envío, precio, fecha de envío y fecha de entrega
+'''
+def generar_envios(envios, fecha, id_envio):
+    metodo_envio = random.choice(["Empresa 1", "Empresa 2", "Empresa 3"])  # Seleccionar un método de envío aleatorio
+    precio = random.randint(500, 5000)  # Generar un precio de envío aleatorio
+    fecha_envio = fecha + datetime.timedelta(days=random.randint(1, 5))  # Generar una fecha de envío aleatoria
+    fecha_entrega = fecha_envio + datetime.timedelta(days=random.randint(1, 10))  # Generar una fecha de entrega aleatoria
+    envios.append((id_envio, metodo_envio, precio, fecha_envio, fecha_entrega))  
+    return envios 
+
+
+# BLOQUE PRINCIPAL
+#----------------------------------------------------------------------------
+# Credenciales para la conexión a la base de datos
 host = 'bd-cliente.postgres.database.azure.com'
 dbname = 'postgres'
 user = 'cliente'
 password = 'Arqui1234!'
 
-# Conexión a la base de datos
+# Establecer la conexión a la base de datos PostgreSQL
 conn = psycopg2.connect(
     dbname=dbname,
     user=user,
@@ -17,11 +122,13 @@ conn = psycopg2.connect(
     host=host
 )
 
+# Crear un cursor para realizar operaciones en la base de datos
 cursor = conn.cursor()
 
-# Datos sintéticos
+# Inicializar Faker para generar datos sintéticos
 fake = Faker()
 
+# Lista de categorías de productos
 categorias = [
     'computadores',
     'telefonos celulares',
@@ -31,6 +138,7 @@ categorias = [
     'monitores'
 ]
 
+# Diccionario de productos específicos por categoría
 productos_especificos = {
     'computadores': [
         'Laptop HP', 'MacBook Pro', 'Dell Inspiron', 'Lenovo ThinkPad', 'Acer Aspire',
@@ -59,74 +167,6 @@ productos_especificos = {
     ]
 }
 
-def generar_clientes(n):
-    clientes = []
-    for _ in range(n):
-        run_cliente = fake.unique.ssn()
-        nombre = fake.name()
-        correo = fake.email()
-        direccion = fake.address()
-        telefono = fake.random_number(digits=9)
-        clientes.append((run_cliente, nombre, correo, direccion, telefono))
-    return clientes
-
-def generar_productos(productos_especificos):
-    productos_detalles = {}
-    id_producto = 1
-    for categoria, productos in productos_especificos.items():
-        detalles_categoria = {}
-        for producto in productos:
-            precio_venta = random.randint(10000, 2000000)  
-            precio_compra = random.randint(5000, precio_venta)  
-            rut_proveedor = fake.unique.ssn()  
-            detalles_producto = {
-                'id_producto': id_producto,
-                'producto': producto,
-                'precio_venta': precio_venta,
-                'precio_compra': precio_compra,
-                'rut_proveedor': rut_proveedor
-            }
-            detalles_categoria[producto] = detalles_producto
-            id_producto += 1  
-        productos_detalles[categoria] = detalles_categoria
-    return productos_detalles
-
-def generar_detalles_boleta(n, run_clientes, productos_detalles):
-    detalles_boleta = []
-    envios = []
-    boleta = []
-    for _ in range(n):
-        run_cliente = random.choice(run_clientes)
-        productos = random.choice(list(productos_detalles.keys()))
-        id_envio = fake.random_number(digits=6)
-        id_boleta = fake.random_number(digits=6)
-        
-        fecha = fake.date_this_year()
-        total = 0
-        for producto in productos_detalles[productos]:
-            id_detalle_boleta = fake.random_number(digits=6)
-            id_producto = productos_detalles[productos][producto]['id_producto']
-            cantidad = random.randint(1, 10)
-            valor = productos_detalles[productos][producto]['precio_venta'] * cantidad
-            total += valor
-            detalles_boleta.append((id_detalle_boleta, id_producto, id_envio, id_boleta, cantidad, valor))
-            
-        # Envios
-        envios = generar_envios(envios, fecha, id_envio)  
-        
-        # Boletas
-        boleta.append((id_boleta, run_cliente, fecha, total))     
-             
-    return detalles_boleta, envios, boleta    
- 
-def generar_envios(envios, fecha, id_envio):
-        metodo_envio = random.choice(["Empresa 1", "Empresa 2", "Empresa 3"])
-        precio = random.randint(500, 5000)
-        fecha_envio = fecha + datetime.timedelta(days=random.randint(1, 5))  
-        fecha_entrega = fecha_envio + datetime.timedelta(days=random.randint(1, 10))
-        envios.append((id_envio, metodo_envio, precio, fecha_envio, fecha_entrega))  
-        return envios 
-        
 # Crear datos sintéticos
 clientes = generar_clientes(10)
 productos = generar_productos(productos_especificos)
@@ -170,9 +210,9 @@ for detalle_boleta in detalles_boleta:
         VALUES (%s, %s, %s, %s, %s, %s)
     """, detalle_boleta)
 
-# Confirmar las transacciones
+# Confirmar las transacciones en la base de datos
 conn.commit()
 
-# Cerrar la conexión
+# Cerrar el cursor y la conexión a la base de datos
 cursor.close()
 conn.close()
