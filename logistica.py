@@ -243,7 +243,7 @@ for id_stock_producto, id_sucursal, id_producto, stock in stock_productos:
     )
 
 # Generar datos de proveedores
-proveedores = generar_proveedores(10)
+proveedores = generar_proveedores(200)
 
 # Insertar datos en Proveedor
 for proveedor in proveedores:

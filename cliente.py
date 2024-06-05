@@ -10,17 +10,19 @@ from faker import Faker
 # DEFINICIONES DE FUNCIONES
 #----------------------------------------------------------------------------
 '''
-Entrada: n (int) - Cantidad de clientes a generar
+Entradas: 
+        - n (int) - Cantidad de clientes a generar
+        - comunas (list) - Lista de comunas de la Región Metropolitana de Santiago
 Salida: clientes (list) - Lista de tuplas con los datos de los clientes generados
 Descripción: Genera datos sintéticos de clientes con RUT único
 '''
-def generar_clientes(n):
+def generar_clientes(n, comunas):
     clientes = []
     for _ in range(n):
         run_cliente = fake.unique.ssn()  # Generar un RUT de cliente único
         nombre = fake.name()  # Generar un nombre
         correo = fake.email()  # Generar un correo electrónico
-        direccion = fake.address()  # Generar una dirección
+        direccion = random.choice(comunas)  # Generar una dirección
         telefono = fake.random_number(digits=9)  # Generar un número de teléfono
         clientes.append((run_cliente, nombre, correo, direccion, telefono))
     return clientes
@@ -167,12 +169,49 @@ productos_especificos = {
     ]
 }
 
+# Lista de comunas de la Región Metropolitana de Santiago
+comunas = [
+    'Cerrillos',
+    'Cerro Navia',
+    'Conchalí',
+    'El Bosque',
+    'Estación Central',
+    'Huechuraba',
+    'Independencia',
+    'La Cisterna',
+    'La Florida',
+    'La Granja',
+    'La Pintana',
+    'La Reina',
+    'Las Condes',
+    'Lo Barnechea',
+    'Lo Espejo',
+    'Lo Prado',
+    'Macul',
+    'Maipú',
+    'Ñuñoa',
+    'Pedro Aguirre Cerda',
+    'Peñalolén',
+    'Providencia',
+    'Pudahuel',
+    'Puente Alto',
+    'Quilicura',
+    'Quinta Normal',
+    'Recoleta',
+    'Renca',
+    'San Joaquín',
+    'San Miguel',
+    'San Ramón',
+    'Santiago',
+    'Vitacura'
+]
+
 # Crear datos sintéticos
-clientes = generar_clientes(10)
+clientes = generar_clientes(200, comunas)
 productos = generar_productos(productos_especificos)
 run_clientes = [cliente[0] for cliente in clientes]
 
-detalles_boleta, envios, boletas = generar_detalles_boleta(10, run_clientes, productos)
+detalles_boleta, envios, boletas = generar_detalles_boleta(1000, run_clientes, productos)
 
 # Insertar datos en la tabla Cliente
 for cliente in clientes:

@@ -30,17 +30,18 @@ def generar_sucursal_departamento(sucursales_ids, departamentos_ids):
 Entradas:
         - num_trabajadores (int) - Cantidad de trabajadores a generar
         - departamentos_ids (list) - Lista de IDs de departamentos
+        - cargos (list) - Lista de cargos de trabajadores
 Salida: trabajadores_data (list) - Lista de tuplas con los datos de los trabajadores generados
 Descripción: Genera datos sintéticos de trabajadores con RUT único y sueldo aleatorio por departamento
 '''
 # Función para generar datos falsos de trabajadores
-def generar_trabajadores(num_trabajadores, departamentos_ids):
+def generar_trabajadores(num_trabajadores, departamentos_ids, cargos):
     trabajadores_data = []
     for _ in range(num_trabajadores):
-        run_trabajador = fake.unique.ssn()
-        nombre = fake.name()
-        correo = fake.email()
-        cargo = fake.job()
+        run_trabajador = fake.unique.ssn() # RUT aleatorio
+        nombre = fake.name() # Nombre aleatorio
+        correo = fake.email() # Correo aleatorio
+        cargo = random.choice(cargos) # Cargo aleatorio
         sueldo = random.randint(300000, 1000000)  # Sueldo aleatorio
         fecha_ingreso = fake.date_between(start_date='-10y', end_date='today')
         id_departamento = random.choice(departamentos_ids)
@@ -75,6 +76,38 @@ departamentos = [
     'Tecnología de la Información',
     'Legal',
     'Compras'
+]
+
+# Lista de cargos de trabajadores
+cargos = cargos = [
+    'Director de Recursos Humanos',
+    'Gerente de Recursos Humanos',
+    'Especialista en Desarrollo de Talento',
+    'Coordinador de Cultura Corporativa',
+    'Director Financiero',
+    'Gerente Financiero',
+    'Analista Financiero',
+    'Especialista en Planificación Financiera',
+    'Director de Operaciones',
+    'Gerente de Operaciones',
+    'Coordinador de Logística',
+    'Analista de Cadena de Suministro',
+    'Director de Ventas y Marketing',
+    'Gerente de Marketing',
+    'Analista de Marketing Digital',
+    'Especialista en Publicidad y Promociones',
+    'Director de Tecnología de la Información',
+    'Gerente de TI',
+    'Desarrollador Web',
+    'Especialista en Ciberseguridad',
+    'Administrador de Sistemas',
+    'Director Legal',
+    'Abogado Corporativo',
+    'Especialista en Cumplimiento Legal',
+    'Director de Compras',
+    'Gerente de Compras',
+    'Analista de Compras',
+    'Coordinador de Proveedores'
 ]
 
 # Lista de sucursales con datos generados por Faker
@@ -123,7 +156,7 @@ for id_sucursal_departamento, id_sucursal, id_departamento in sucursal_departame
     )
 
 # Generar e insertar datos falsos en la tabla Trabajador
-trabajadores_data = generar_trabajadores(100, departamentos_ids)
+trabajadores_data = generar_trabajadores(300, departamentos_ids, cargos)
 for trabajador in trabajadores_data:
     cursor_rrhh.execute(
         """
