@@ -73,12 +73,12 @@ def generar_detalles_boleta(n, run_clientes, productos_detalles):
     for _ in range(n):
         run_cliente = random.choice(run_clientes)  # Seleccionar un cliente aleatorio
         productos = random.choice(list(productos_detalles.keys()))  # Seleccionar una categoría de productos aleatoria
-        id_envio = fake.random_number(digits=6)  # Generar un ID de envío aleatorio
-        id_boleta = fake.random_number(digits=6)  # Generar un ID de boleta aleatorio       
+        id_envio = fake.random_number(digits=9)  # Generar un ID de envío aleatorio
+        id_boleta = fake.random_number(digits=9)  # Generar un ID de boleta aleatorio       
         fecha = fake.date_this_year()  # Generar una fecha dentro del año actual
         total = 0
         for producto in productos_detalles[productos]:
-            id_detalle_boleta = fake.random_number(digits=6)  # Generar un ID de detalle de boleta aleatorio
+            id_detalle_boleta = fake.random_number(digits=9)  # Generar un ID de detalle de boleta aleatorio
             id_producto = productos_detalles[productos][producto]['id_producto']
             cantidad = random.randint(1, 10)  # Generar una cantidad aleatoria
             valor = productos_detalles[productos][producto]['precio_venta'] * cantidad  # Calcular el valor total
