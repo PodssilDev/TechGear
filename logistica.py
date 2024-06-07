@@ -21,13 +21,11 @@ def generar_productos(productos_especificos):
         for producto in productos:
             precio_venta = random.randint(10000, 2000000)  # Precio de venta aleatorio
             precio_compra = random.randint(5000, precio_venta)  # Precio de compra aleatorio
-            rut_proveedor = fake.unique.ssn()  # RUT de proveedor generado
             detalles_producto = {
                 'id_producto': id_producto,
                 'producto': producto,
                 'precio_venta': precio_venta,
                 'precio_compra': precio_compra,
-                'rut_proveedor': rut_proveedor
             }
             detalles_categoria[producto] = detalles_producto
             id_producto += 1  # Incrementa el ID del producto
@@ -89,18 +87,28 @@ def generar_proveedores(n):
 
 '''
 Entrada:
-        - productos_detalles (dict) - Diccionario con los detalles de los productos
+        - productos_ids (list) - Lista con las id de los productos
         - proveedores (list) - Lista de tuplas con los datos de los proveedores
 Salida: producto_proveedor (list) - Lista de tuplas con los datos de relación entre productos y proveedores
 Descripción: Genera datos de relación entre productos y proveedores de forma aleatoria
 '''
-def generar_producto_proveedor(productos_detalles, proveedores):
+def generar_producto_proveedor(productos_ids, proveedores):
     producto_proveedor = []
-    for categoria, productos in productos_detalles.items():
-        for producto in productos:
-            rut_proveedor = productos[producto]['rut_proveedor']
-            id_producto = productos[producto]['id_producto']
-            producto_proveedor.append((rut_proveedor, id_producto))
+    cant_productos = len(productos_ids)
+    cant_proveedores = len(proveedores)
+    id_prod_prov = 1
+
+    for proveedor in proveedores:   
+        if (proveedor[0] == proveedores[cant_proveedores - 1][0]):
+            productos = productos_ids
+        else:
+            productos = random.sample(productos_ids, (cant_productos // cant_proveedores))
+        for id_producto in productos:     
+            rut_proveedor = proveedor[0]
+            producto_proveedor.append((id_prod_prov, id_producto, rut_proveedor))
+            productos_ids.remove(id_producto)
+            id_prod_prov += 1
+            
     return producto_proveedor
 
 
@@ -183,6 +191,39 @@ sucursales = [
     {'id': 3, 'nombre': 'Sucursal 3', 'direccion': fake.address()}
 ]
 
+# Desactivar restricciones de llave foránea antes de limpiar las tablas
+cursor.execute("SET session_replication_role = 'replica'")
+
+# Limpiar las tablas
+cursor.execute('DELETE FROM "Departamento"')
+cursor.execute('DELETE FROM "Producto"')
+cursor.execute('DELETE FROM "Producto_Proveedor"')
+cursor.execute('DELETE FROM "Proveedor"')
+cursor.execute('DELETE FROM "Stock_Sucursal"')
+cursor.execute('DELETE FROM "Sucursal"')
+cursor.execute('DELETE FROM "Sucursal_Departamento"')
+
+# Reiniciar las secuencias para que comiencen desde 1
+cursor.execute('ALTER SEQUENCE "Departamento_id_departamento_seq" RESTART WITH 1')
+cursor.execute('ALTER SEQUENCE "Producto_id_producto_seq" RESTART WITH 1')
+cursor.execute('ALTER SEQUENCE "Producto_Proveedor_id_producto_proveedor_seq" RESTART WITH 1')
+cursor.execute('ALTER SEQUENCE "Stock_Sucursal_stock_id_seq" RESTART WITH 1')
+cursor.execute('ALTER SEQUENCE "Sucursal_id_sucursal_seq" RESTART WITH 1')
+cursor.execute('ALTER SEQUENCE "Sucursal_Departamento_id_sucursal_departamento_seq" RESTART WITH 1')
+
+# Activar restricciones de llave foránea después de limpiar las tablas
+cursor.execute("SET session_replication_role = 'origin'")
+
+# Generar datos de proveedores
+proveedores = generar_proveedores(10)
+
+# Insertar datos en Proveedor
+for proveedor in proveedores:
+    cursor.execute(
+        """INSERT INTO public."Proveedor" (rut_proveedor, nombre, direccion, contacto) VALUES (%s, %s, %s, %s)""",
+        proveedor
+    )
+    
 # Generar productos
 productos = generar_productos(productos_especificos)
 
@@ -242,14 +283,18 @@ for id_stock_producto, id_sucursal, id_producto, stock in stock_productos:
         (id_stock_producto, id_sucursal, id_producto, stock)
     )
 
-# Generar datos de proveedores
-proveedores = generar_proveedores(200)
+# generar id_productos
+productos_ids = [detalles['id_producto'] for productos_cat in productos.values() for detalles in productos_cat.values()]
 
-# Insertar datos en Proveedor
-for proveedor in proveedores:
+# Generar datos de productos_proveedor
+productos_proveedores = generar_producto_proveedor(productos_ids, proveedores)
+
+# Insertar datos en Producto_Proveedor
+for prod_prov in productos_proveedores:
+    
     cursor.execute(
-        """INSERT INTO public."Proveedor" (rut_proveedor, nombre, direccion, contacto) VALUES (%s, %s, %s, %s)""",
-        proveedor
+        """INSERT INTO public."Producto_Proveedor" (id_producto_proveedor, id_producto, rut_proveedor) VALUES (%s, %s, %s)""",
+        prod_prov
     )
 
 # Confirmar las transacciones en la base de datos
