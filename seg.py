@@ -1,12 +1,7 @@
 import psycopg2
 from cryptography.fernet import Fernet
-
-# Leer la clave de encriptación desde un archivo seguro
-with open("secret.key", "rb") as key_file:
-    key = key_file.read()
-
-# Inicializar Fernet con la clave leída
-fernet = Fernet(key)
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 
 # Credenciales para la conexión a la base de datos
 host = 'cliente-db.postgres.database.azure.com'
@@ -39,10 +34,32 @@ encrypted_telefono = cursor.fetchone()[0]
 if isinstance(encrypted_telefono, memoryview):
     encrypted_telefono = encrypted_telefono.tobytes()
 
-# Desencriptar el número de teléfono usando la clave Fernet
-decMessage = fernet.decrypt(encrypted_telefono).decode()
 
-print("decrypted string: ", decMessage)
+# Configurar la conexión a Azure Key Vault
+KVUri = "https://keyvault-techgear.vault.azure.net"
+credential = DefaultAzureCredential()
+client = SecretClient(vault_url=KVUri, credential=credential)
+
+# Recuperar la clave de encriptación desde el Key Vault
+retrieved_secret = client.get_secret("encryption-key")
+key = retrieved_secret.value  # La clave se recupera como cadena base64
+
+# Convertir la clave recuperada a bytes para usar con Fernet
+key_bytes = key.encode()
+
+# Inicializar Fernet con la clave correcta
+try:
+    fernet = Fernet(key_bytes)
+except ValueError as e:
+    print(f"Error: {e}")
+    exit()
+
+# Desencriptar el número de teléfono usando la clave Fernet
+try:
+    decMessage = fernet.decrypt(encrypted_telefono).decode()
+    print("Número de teléfono desencriptado:", decMessage)
+except Exception as e:
+    print(f"Error al desencriptar el número de teléfono: {e}")
 
 # Cerrar el cursor y la conexión a la base de datos
 cursor.close()

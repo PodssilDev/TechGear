@@ -7,6 +7,9 @@ import datetime
 import psycopg2
 from faker import Faker
 from cryptography.fernet import Fernet
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
+
 
 
 # DEFINICIONES DE FUNCIONES
@@ -26,8 +29,7 @@ def generar_clientes(n, comunas):
         correo = fake.email()  # Generar un correo electrónico
         direccion = random.choice(comunas)  # Generar una dirección
         telefono = fake.random_number(digits=9)  # Generar un número de teléfono
-         # Encriptar el número de teléfono antes de almacenarlo
-        telefono_encriptado = cipher_suite.encrypt(str(telefono).encode()).decode('utf-8')
+        telefono_encriptado = cipher_suite.encrypt(str(telefono).encode()).decode('utf-8') # Encriptar el número de teléfono
         clientes.append((run_cliente, nombre, correo, direccion, telefono_encriptado))
     return clientes
 
@@ -113,13 +115,18 @@ def generar_envios(envios, fecha, id_envio):
 
 
 
-# Generar o cargar la clave de encriptación (haz esto una vez y almacénala de forma segura)
-key = Fernet.generate_key()
-cipher_suite = Fernet(key)
-
-
 # BLOQUE PRINCIPAL
 #----------------------------------------------------------------------------
+# Credenciales para la conexión a Azure Key Vault
+KVurl = "https://keyvault-techgear.vault.azure.net"
+credencial = DefaultAzureCredential()
+secretClient = SecretClient(vault_url=KVurl, credential=credencial)
+
+# Obtiene la clave de encriptación del Key Vault
+retrieved_secret = secretClient.get_secret("encryption-key")
+key = retrieved_secret.value.encode() 
+cipher_suite = Fernet(key)
+
 # Credenciales para la conexión a la base de datos
 host = 'cliente-db.postgres.database.azure.com'
 dbname = 'postgres'
