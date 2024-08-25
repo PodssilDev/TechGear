@@ -6,6 +6,8 @@ import random
 import datetime
 import psycopg2
 from faker import Faker
+from cryptography.fernet import Fernet
+
 
 # DEFINICIONES DE FUNCIONES
 #----------------------------------------------------------------------------
@@ -24,7 +26,9 @@ def generar_clientes(n, comunas):
         correo = fake.email()  # Generar un correo electrónico
         direccion = random.choice(comunas)  # Generar una dirección
         telefono = fake.random_number(digits=9)  # Generar un número de teléfono
-        clientes.append((run_cliente, nombre, correo, direccion, telefono))
+         # Encriptar el número de teléfono antes de almacenarlo
+        telefono_encriptado = cipher_suite.encrypt(str(telefono).encode()).decode('utf-8')
+        clientes.append((run_cliente, nombre, correo, direccion, telefono_encriptado))
     return clientes
 
 
@@ -108,10 +112,16 @@ def generar_envios(envios, fecha, id_envio):
     return envios 
 
 
+
+# Generar o cargar la clave de encriptación (haz esto una vez y almacénala de forma segura)
+key = Fernet.generate_key()
+cipher_suite = Fernet(key)
+
+
 # BLOQUE PRINCIPAL
 #----------------------------------------------------------------------------
 # Credenciales para la conexión a la base de datos
-host = 'bd-cliente.postgres.database.azure.com'
+host = 'cliente-db.postgres.database.azure.com'
 dbname = 'postgres'
 user = 'cliente'
 password = 'Arqui1234!'
