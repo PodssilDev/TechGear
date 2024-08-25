@@ -25,13 +25,14 @@ CREATE TABLE `Sucursal_Departamento` (
 -- Crear la tabla Trabajador
 -- Descripcion: Tabla que almacena los trabajadores de la empresa
 CREATE TABLE `Trabajador` (
-  `run_trabajador` varchar(255) PRIMARY KEY,  -- Llave primaria, identificador único del trabajador
-  `nombre` varchar(255),  -- Nombre del trabajador
-  `correo` varchar(255),  -- Correo electrónico del trabajador
-  `cargo` varchar(255),  -- Cargo del trabajador
-  `sueldo` integer,  -- Sueldo del trabajador
-  `fecha_ingreso` date,  -- Fecha de ingreso del trabajador
-  `id_departamento` integer  -- Identificador del departamento al que pertenece el trabajador
+  `run_trabajador` VARBINARY(255) PRIMARY KEY,  -- Llave primaria, identificador único del trabajador (encriptado)
+  `nombre` VARCHAR(255),  -- Nombre del trabajador
+  `correo` VARCHAR(255),  -- Correo electrónico del trabajador
+  `cargo` VARCHAR(255),  -- Cargo del trabajador
+  `sueldo` VARBINARY(255),  -- Sueldo del trabajador (encriptado)
+  `fecha_ingreso` DATE,  -- Fecha de ingreso del trabajador
+  `id_departamento` INTEGER,  -- Identificador del departamento al que pertenece el trabajador
+  FOREIGN KEY (`id_departamento`) REFERENCES `Departamento` (`id_departamento`)
 );
 
 -- Añadir llave foránea en la tabla Sucursal_Departamento para asociarla con la tabla Sucursal

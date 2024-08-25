@@ -5,6 +5,8 @@
 import random
 from faker import Faker
 import mysql.connector
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 
 # DEFINICIONES DE FUNCIONES
 #----------------------------------------------------------------------------
@@ -51,11 +53,21 @@ def generar_trabajadores(num_trabajadores, departamentos_ids, cargos):
 
 # BLOQUE PRINCIPAL
 #----------------------------------------------------------------------------
+# Credenciales para la conexión a Azure Key Vault
+KVurl = "https://keyvault-techgear.vault.azure.net"
+credencial = DefaultAzureCredential()
+secretClient = SecretClient(vault_url=KVurl, credential=credencial)
+
+# Obtiene la clave de encriptación del Key Vault
+retrieved_secret = secretClient.get_secret("encryption-key")
+clave_secreta = retrieved_secret.value
+print(clave_secreta)
+
 # Configuración para la conexión a la base de datos de RRHH
 config_rrhh = {
     'user': 'rrhh',
     'password': 'Arqui1234!',
-    'host': 'bd-rrhh.mysql.database.azure.com',
+    'host': 'db-rrhh.mysql.database.azure.com',
     'database': 'rrhh',
 }
 
@@ -161,9 +173,9 @@ for trabajador in trabajadores_data:
     cursor_rrhh.execute(
         """
         INSERT INTO Trabajador (run_trabajador, nombre, correo, cargo, sueldo, fecha_ingreso, id_departamento) 
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        VALUES (AES_ENCRYPT(%s, %s), %s, %s, %s, AES_ENCRYPT(%s, %s), %s, %s)
         """,
-        trabajador
+        (trabajador[0], clave_secreta, trabajador[1], trabajador[2], trabajador[3], trabajador[4], clave_secreta, trabajador[5], trabajador[6])
     )
 
 # Confirmar las transacciones en la base de datos
